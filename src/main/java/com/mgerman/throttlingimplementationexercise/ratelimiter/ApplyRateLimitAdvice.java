@@ -1,6 +1,7 @@
 package com.mgerman.throttlingimplementationexercise.ratelimiter;
 
 import com.mgerman.throttlingimplementationexercise.ratelimiter.exception.RequestRateLimitException;
+import org.aspectj.lang.JoinPoint;
 import org.aspectj.lang.annotation.Aspect;
 import org.aspectj.lang.annotation.Before;
 import org.springframework.beans.factory.annotation.Value;
@@ -20,13 +21,14 @@ public class ApplyRateLimitAdvice {
     @Value("${throttling-period-in-minutes}")
     private long periodInMinutes;
 
-    ConcurrentHashMap<String, RateLimiter> ipToRateLimiterMap = new ConcurrentHashMap<>();
+    ConcurrentHashMap<String, RateLimiter> ipAndMethodNameToRateLimiterMap = new ConcurrentHashMap<>();
 
     @Before("@annotation(ApplyRateLimiter)")
-    public void tryAccessToMethod() throws RequestRateLimitException {
+    public void tryAccessToMethod(JoinPoint joinPoint) throws RequestRateLimitException {
         var request = ((ServletRequestAttributes) RequestContextHolder.currentRequestAttributes()).getRequest();
-        ipToRateLimiterMap.computeIfAbsent(request.getRemoteAddr(), k -> new RateLimiter(requestsCountPerMinute, Duration.ofMinutes(periodInMinutes)));
-        RateLimiter rateLimiter = ipToRateLimiterMap.get(request.getRemoteAddr());
+        String ipAndMethodName = request.getRemoteAddr() + "," + joinPoint.getSignature().getName();
+        ipAndMethodNameToRateLimiterMap.computeIfAbsent(ipAndMethodName, k -> new RateLimiter(requestsCountPerMinute, Duration.ofMinutes(periodInMinutes)));
+        RateLimiter rateLimiter = ipAndMethodNameToRateLimiterMap.get(ipAndMethodName);
         if (!rateLimiter.isRequestAllowed()) {
             throw new RequestRateLimitException();
         }

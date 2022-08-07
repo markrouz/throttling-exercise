@@ -39,6 +39,23 @@ class ThrottlingImplementationExerciseApplicationTests {
                             throw new RuntimeException(e);
                         }
                     }
+                    try {
+                        Thread.sleep( 60 * 1000);
+                    } catch (InterruptedException e) {
+                        throw new RuntimeException(e);
+                    }
+                    for (int i = 0; i < 6; i++) {
+                        try {
+                            if (i < 2) {
+                                this.mockMvc.perform(get("/").with(remoteHost(ip))).andDo(print()).andExpect(status().isOk());
+                            } else {
+                                this.mockMvc.perform(get("/").with(remoteHost(ip))).andDo(print()).andExpect(status().isBadGateway());
+                            }
+
+                        } catch (Exception e) {
+                            throw new RuntimeException(e);
+                        }
+                    }
                 }
         );
     }
